@@ -5,6 +5,7 @@ const session = require("express-session");
 const mongoose = require("mongoose");
 const MongoStore = require("connect-mongo");
 const fileUpload = require("express-fileupload");
+const randomstring = require("randomstring");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 
@@ -99,7 +100,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/portfolios", async (req, res) => {
+app.post("/portfolies", async (req, res) => {
   const errors = validationResult(req);
   const file = req.files.photo;
   const uploadDir = `${__dirname}/public/uploads`;
@@ -115,30 +116,60 @@ app.post("/portfolios", async (req, res) => {
     file.mv(path, async (err) => {
       if (err) res.status(500).redirect("/");
       else {
+        const photoFile = `${randomstring.generate()}.${
+          req.files.photo.name.split(".")[1]
+        }`;
+
         const portfolioInfo = {
           title: req.body.title,
           description: req.body.description,
-          photo: req.files.photo.name,
+          photo: photoFile,
         };
         await Portfolio.create(portfolioInfo);
         res.status(201).redirect("/");
       }
     });
   } else {
-    const portfolios = await Portfolio.find({});
+    const portfolies = await Portfolio.find({});
     res.status(400).render("index", {
       pageName: "home",
-      portfolios,
+      portfolies,
       errors: errors,
     });
   }
 });
 
+app.get("/portfolies/delete/:id", async (req, res) => {
+  const id = req.params.id;
+  const portfolio = await Portfolio.findById(id);
+
+  if (!portfolio) {
+    res.status(400).redirect("/");
+    return;
+  }
+
+  const photo = `${__dirname}/public/uploads/${portfolio.photo}`;
+
+  fs.unlink(photo, async (err) => {
+    if (!err) {
+      await Portfolio.findByIdAndRemove(id);
+      res.status(200).redirect("/");
+    } else {
+      const portfolies = await Portfolio.find({});
+      res.status(500).render("index", {
+        pageName: "home",
+        portfolies,
+        errors: "Somethings goes wrong!",
+      });
+    }
+  });
+});
+
 app.get("/", async (req, res) => {
-  const portfolios = await Portfolio.find({});
+  const portfolies = await Portfolio.find({});
   res.status(200).render("index", {
     pageName: "home",
-    portfolios,
+    portfolies,
     errors: null,
   });
 });
