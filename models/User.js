@@ -15,12 +15,13 @@ const UserSchema = Schema({
   },
 });
 
-UserSchema.pre("validate", function (value, { req }) {
+UserSchema.pre("save", function (next) {
   const user = this;
   if (user.isModified("password")) {
     bcrypt.hash(user.password, 10, (err, hash) => {
       if (err) next(err);
       user.password = hash;
+      next();
     });
   } else next();
 });
