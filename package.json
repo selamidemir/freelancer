@@ -1,0 +1,41 @@
+{
+  "name": "freelancer",
+  "version": "0.0.1",
+  "description": "Express js ile geliştirilimiş freelancer websitesi.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app",
+    "dev": "nodemon app",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/selamidemir/freelancer.git"
+  },
+  "keywords": [
+    "express",
+    "js",
+    "expressjs",
+    "freelancer",
+    "website",
+    "bootstrap"
+  ],
+  "author": "Selami Demir",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/selamidemir/freelancer/issues"
+  },
+  "homepage": "https://github.com/selamidemir/freelancer#readme",
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "connect-mongo": "^4.6.0",
+    "dotenv": "^16.0.3",
+    "ejs": "^3.1.8",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "mongoose": "^6.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
