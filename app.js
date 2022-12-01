@@ -1,10 +1,15 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const fs = require("fs");
 const session = require("express-session");
 const mongoose = require("mongoose");
 const MongoStore = require("connect-mongo");
-const User = require("./models/User");
+const fileUpload = require("express-fileupload");
+const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
+
+const User = require("./models/User");
+const Portfolio = require("./models/Portfolio");
 
 const app = express();
 const port = process.env.port || 5000;
@@ -27,6 +32,7 @@ app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(fileUpload());
 app.use(
   // session aç
   session({
@@ -93,11 +99,47 @@ app.post("/register", async (req, res) => {
   }
 });
 
+app.post("/portfolios", async (req, res) => {
+  const errors = validationResult(req);
+  const file = req.files.photo;
+  const uploadDir = `${__dirname}/public/uploads`;
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdir(`${__dirname}/public/uploads`, (err) => {
+      if (err) res.status(500).redirect("/");
+      return;
+    });
+  }
+
+  if (errors.isEmpty()) {
+    const path = `${__dirname}/public/uploads/${file.name}`;
+    file.mv(path, async (err) => {
+      if (err) res.status(500).redirect("/");
+      else {
+        const portfolioInfo = {
+          title: req.body.title,
+          description: req.body.description,
+          photo: req.files.photo.name,
+        };
+        await Portfolio.create(portfolioInfo);
+        res.status(201).redirect("/");
+      }
+    });
+  } else {
+    const portfolios = await Portfolio.find({});
+    res.status(400).render("index", {
+      pageName: "home",
+      portfolios,
+      errors: errors,
+    });
+  }
+});
+
 app.get("/", async (req, res) => {
+  const portfolios = await Portfolio.find({});
   res.status(200).render("index", {
     pageName: "home",
-    portfolios: null,
-    error: null,
+    portfolios,
+    errors: null,
   });
 });
 
