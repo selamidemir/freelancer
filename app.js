@@ -51,35 +51,70 @@ app.use("*", (req, res, next) => {
   next();
 });
 
-app.get("/login", async (req, res) => {
-  const user = await User.findOne({});
-  const login = user ? true : false;
-  res.status(200).render("login", {
-    pageName: "login",
-    login: login,
-    errors: null,
-  });
-});
-
-app.post("/login", async (req, res) => {
-  const user = await User.findOne({});
-  if (user) {
-    bcrypt.compare(req.body.password, user.password, (err, result) => {
-      if (result) {
-        req.session.userID = user._id;
-        res.status(200).redirect("/");
-      } else {
-        res.status(400).render("login", {
-          pageName: "login",
-          login: true,
-          errors: "Something goes wrong!",
-        });
-      }
+app.get(
+  "/login",
+  [
+    body("email")
+      .not()
+      .isEmpty()
+      .isEmail()
+      .withMessage("Enter a correct email address!"),
+    body("password")
+      .not()
+      .isEmpty()
+      .withMessage("Enter a password")
+      .isLength({ min: 5 }),
+  ],
+  async (req, res) => {
+    const user = await User.findOne({});
+    const login = user ? true : false;
+    res.status(200).render("login", {
+      pageName: "login",
+      login: login,
+      errors: null,
     });
-  } else {
-    res.status(400).redirect("/");
   }
-});
+);
+
+app.post(
+  "/login",
+  [
+    body("email")
+      .not()
+      .isEmpty()
+      .isEmail()
+      .withMessage("Enter a corret email address"),
+    body("password")
+      .not()
+      .isEmpty()
+      .isLength({ min: 5 })
+      .withMessage("Enter a password"),
+    body("confirm-password").custom((value, { req }) => {
+      if (value !== req.body.password)
+        throw new Error("Password confirmation does not match password.");
+      else return true;
+    }),
+  ],
+  async (req, res) => {
+    const user = await User.findOne({});
+    if (user) {
+      bcrypt.compare(req.body.password, user.password, (err, result) => {
+        if (result) {
+          req.session.userID = user._id;
+          res.status(200).redirect("/");
+        } else {
+          res.status(400).render("login", {
+            pageName: "login",
+            login: true,
+            errors: "Something goes wrong!",
+          });
+        }
+      });
+    } else {
+      res.status(400).redirect("/");
+    }
+  }
+);
 
 app.get("/logout", (req, res) => {
   req.session.userID = null;
@@ -100,44 +135,58 @@ app.post("/register", async (req, res) => {
   }
 });
 
-app.post("/portfolies", async (req, res) => {
-  const errors = validationResult(req);
-  const file = req.files.photo;
-  const uploadDir = `${__dirname}/public/uploads`;
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdir(`${__dirname}/public/uploads`, (err) => {
-      if (err) res.status(500).redirect("/");
-      return;
-    });
-  }
+app.post(
+  "/portfolies",
+  [
+    body("title").not().isEmpty().withMessage("Enter a portfolio title."),
+    body("description")
+      .not()
+      .isEmpty()
+      .withMessage("Enter a description.")
+      .custom((value, { req }) => {
+        if (!req.files.photo) throw new Error("Select a photo.");
+        else return true;
+      }),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    const file = req.files.photo;
+    const uploadDir = `${__dirname}/public/uploads`;
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdir(`${__dirname}/public/uploads`, (err) => {
+        if (err) res.status(500).redirect("/");
+        return;
+      });
+    }
 
-  if (errors.isEmpty()) {
-    const path = `${__dirname}/public/uploads/${file.name}`;
-    file.mv(path, async (err) => {
-      if (err) res.status(500).redirect("/");
-      else {
-        const photoFile = `${randomstring.generate()}.${
-          req.files.photo.name.split(".")[1]
-        }`;
-
-        const portfolioInfo = {
-          title: req.body.title,
-          description: req.body.description,
-          photo: photoFile,
-        };
-        await Portfolio.create(portfolioInfo);
-        res.status(201).redirect("/");
-      }
-    });
-  } else {
-    const portfolies = await Portfolio.find({});
-    res.status(400).render("index", {
-      pageName: "home",
-      portfolies,
-      errors: errors,
-    });
+    if (errors.isEmpty()) {
+      const photoFile = `${randomstring.generate()}.${
+        req.files.photo.name.split(".")[1]
+      }`;
+      const path = `${__dirname}/public/uploads/${photoFile}`;
+      file.mv(path, async (err) => {
+        if (err) res.status(500).redirect("/");
+        else {
+          const portfolioInfo = {
+            title: req.body.title,
+            description: req.body.description,
+            photo: photoFile,
+          };
+          await Portfolio.create(portfolioInfo);
+          res.status(201).redirect("/");
+        }
+      });
+    } else {
+      const portfolies = await Portfolio.find({});
+      console.log(errors);
+      res.status(400).render("index", {
+        pageName: "home",
+        portfolies,
+        errors: errors,
+      });
+    }
   }
-});
+);
 
 app.get("/portfolies/delete/:id", async (req, res) => {
   const id = req.params.id;
