@@ -12,6 +12,8 @@ const bcrypt = require("bcrypt");
 const User = require("./models/User");
 const Portfolio = require("./models/Portfolio");
 
+const authMiddleware = require("./middlewares/authMiddleware");
+
 const app = express();
 const port = process.env.port || 5000;
 
@@ -24,7 +26,7 @@ mongoose
     dbName: process.env.APP_MONGODB_DB_NAME,
   })
   .catch((err) => console.log("HATA: MongoBD bağlantısı yapılamadı: ", err));
-global.userIN = true;
+global.userIN = null;
 
 // Set view engine
 app.set("view engine", "ejs");
@@ -47,7 +49,7 @@ app.use(
   })
 );
 app.use("*", (req, res, next) => {
-  if (req.session.userID) userIN = req.session.userID;
+  if (req.session.userID) global.userIN = req.session.userID;
   next();
 });
 
@@ -137,6 +139,7 @@ app.post("/register", async (req, res) => {
 
 app.post(
   "/portfolies",
+  authMiddleware,
   [
     body("title").not().isEmpty().withMessage("Enter a portfolio title."),
     body("description")
