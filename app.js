@@ -120,7 +120,7 @@ app.post(
 
 app.get("/logout", (req, res) => {
   req.session.userID = null;
-  global.userIN = false;
+  global.userIN = null;
   res.status(200).redirect("/");
 });
 
@@ -191,7 +191,7 @@ app.post(
   }
 );
 
-app.get("/portfolies/delete/:id", async (req, res) => {
+app.get("/portfolies/delete/:id", authMiddleware, async (req, res) => {
   const id = req.params.id;
   const portfolio = await Portfolio.findById(id);
 
